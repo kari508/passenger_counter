@@ -358,8 +358,11 @@ stop_data = {
 
 
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "HEAD"])
 def index():
+    if request.method == "HEAD":
+        return "", 200
+    
     selected_route = request.args.get("route", "")
     selected_time_block = request.args.get("time_block", "")
     selected_stop = request.args.get("stop", "")
