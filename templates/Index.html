@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SMART Passenger Counter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+    select, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 1.2em; }
+    .counter { font-size: 2em; text-align: center; margin: 10px 0; }
+    .controls button { width: 48%; font-size: 1.5em; }
+    .controls { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .logo { text-align: center; margin-bottom: 10px; }
+    .logo img { max-width: 100%; height: auto; max-height: 100px; }
+    .message { background-color: #d4edda; color: #155724; padding: 10px; text-align: center; border-radius: 5px; font-weight: bold; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  {% if submitted == "true" %}
+    <div class="message">✅ Submitted!</div>
+  {% endif %}
+
+  <div class="logo">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="SMART Logo">
+  </div>
+
+  <h2>SMART Passenger Tally</h2>
+
+  <form method="POST" action="/submit">
+    <label for="route">Route</label>
+    <select name="route" id="route" onchange="updateTimeBlocks()">
+      <option value="">-- Select Route --</option>
+      {% for route in stop_data %}
+        <option value="{{ route }}" {% if route == selected_route %}selected{% endif %}>{{ route }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="time_block">Time Block</label>
+    <select name="time_block" id="time_block" onchange="updateStops()">
+      <option value="">-- Select Time Block --</option>
+    </select>
+
+    <label for="stop">Stop</label>
+    <select name="stop" id="stop">
+      <option value="">-- Select Stop --</option>
+    </select>
+
+    <div id="paymentTypeSection" style="display: none;">
+      <label for="ticket_books_sold">Ticket Books Sold</label>
+      <input type="number" name="ticket_books_sold" id="ticket_books_sold" value="0" min="0">
+
+      <label for="cash_collected">Cash Collected</label>
+      <input type="number" name="cash_collected" id="cash_collected" value="0" min="0">
+
+      <label for="tickets_collected">Tickets Collected</label>
+      <input type="number" name="tickets_collected" id="tickets_collected" value="0" min="0">
+
+      <label for="credit">Credit</label>
+      <input type="number" name="credit" id="credit" value="0" min="0">
+    </div>
+
+    <div class="counter" id="onCountDisplay">On: 0</div>
+    <div class="controls">
+      <button type="button" onclick="changeCount('on', 1)">+ On</button>
+      <button type="button" onclick="changeCount('on', -1)">- On</button>
+    </div>
+
+    <div class="counter" id="offCountDisplay">Off: 0</div>
+    <div class="controls">
+      <button type="button" onclick="changeCount('off', 1)">+ Off</button>
+      <button type="button" onclick="changeCount('off', -1)">- Off</button>
+    </div>
+
+    <input type="hidden" name="on_count" id="on_count" value="0">
+    <input type="hidden" name="off_count" id="off_count" value="0">
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    let onCount = 0;
+    let offCount = 0;
+
+    function changeCount(type, amount) {
+      if (type === 'on') {
+        onCount = Math.max(0, onCount + amount);
+        document.getElementById("onCountDisplay").textContent = `On: ${onCount}`;
+        document.getElementById("on_count").value = onCount;
+      } else {
+        offCount = Math.max(0, offCount + amount);
+        document.getElementById("offCountDisplay").textContent = `Off: ${offCount}`;
+        document.getElementById("off_count").value = offCount;
+      }
+    }
+
+    const data = {{ stop_data | tojson }};
+    const selectedRoute = {{ selected_route | tojson }};
+    const selectedTimeBlock = {{ selected_time_block | tojson }};
+    const selectedStop = {{ selected_stop | tojson }};
+
+    function updateTimeBlocks() {
+      const route = document.getElementById("route").value;
+      const timeBlockSelect = document.getElementById("time_block");
+      const paymentSection = document.getElementById("paymentTypeSection");
+
+      timeBlockSelect.innerHTML = '<option value="">-- Select Time Block --</option>';
+
+      const routesWithPayment = ["Montrose", "Norwood", "Nucla/Naturita"];
+      if (routesWithPayment.includes(route)) {
+        paymentSection.style.display = "block";
+      } else {
+        paymentSection.style.display = "none";
+      }
+
+      if (route && data[route]) {
+        Object.keys(data[route]).forEach(block => {
+          const option = document.createElement("option");
+          option.value = block;
+          option.textContent = block;
+          if (block === selectedTimeBlock) {
+            option.selected = true;
+          }
+          timeBlockSelect.appendChild(option);
+        });
+        updateStops();
+      }
+    }
+
+    function updateStops() {
+      const route = document.getElementById("route").value;
+      const timeBlock = document.getElementById("time_block").value;
+      const stopSelect = document.getElementById("stop");
+
+      stopSelect.innerHTML = '<option value="">-- Select Stop --</option>';
+
+      if (route && timeBlock && data[route] && data[route][timeBlock]) {
+        const stops = data[route][timeBlock];
+        stops.forEach(stop => {
+          const option = document.createElement("option");
+          option.value = stop;
+          option.textContent = stop;
+          if (stop === selectedStop) {
+            option.selected = true;
+          }
+          stopSelect.appendChild(option);
+        });
+      }
+    }
+
+    window.onload = function () {
+      if (selectedRoute) {
+        document.getElementById("route").value = selectedRoute;
+        updateTimeBlocks();
+      }
+    };
+  </script>
+</body>
+</html>
+
+
+
+
+
+
