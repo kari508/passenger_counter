@@ -17,146 +17,181 @@
 </head>
 <body>
 
-  {% if submitted == "true" %}
-    <div class="message">✅ Submitted!</div>
-  {% endif %}
+{% if submitted == "true" %}
+  <div class="message">✅ Submitted!</div>
+  <audio id="ping-sound" autoplay>
+    <source src="{{ url_for('static', filename='sounds/submit_ping.mp3') }}" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+  <script>console.log("Submission ping sound played.");</script>
+{% endif %}
 
-  <div class="logo">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="SMART Logo">
+<div class="logo">
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="SMART Logo">
+</div>
+
+<h2>SMART Passenger Tally</h2>
+
+<form method="POST" action="/submit">
+  <label for="route">Route</label>
+  <select name="route" id="route" onchange="updateTimeBlocks()" required>
+    <option value="">-- Select Route --</option>
+    {% for route in stop_data %}
+      <option value="{{ route }}" {% if route == selected_route %}selected{% endif %}>{{ route }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="time_block">Time Block</label>
+  <select name="time_block" id="time_block" onchange="updateStops()" required>
+    <option value="">-- Select Time Block --</option>
+  </select>
+
+  <label for="stop">Stop</label>
+  <select name="stop" id="stop" required>
+    <option value="">-- Select Stop --</option>
+  </select>
+
+  <div id="paymentTypeSection" style="display: none;">
+    <label for="ticket_books_sold">Ticket Books Sold</label>
+    <input type="number" name="ticket_books_sold" id="ticket_books_sold" value="0" min="0">
+    <label for="cash_collected">Cash Collected</label>
+    <input type="number" name="cash_collected" id="cash_collected" value="0" min="0">
+    <label for="tickets_collected">Tickets Collected</label>
+    <input type="number" name="tickets_collected" id="tickets_collected" value="0" min="0">
+    <label for="credit">Credit</label>
+    <input type="number" name="credit" id="credit" value="0" min="0">
   </div>
 
-  <h2>SMART Passenger Tally</h2>
+  <div class="counter" id="onCountDisplay">On: 0</div>
+  <div class="controls">
+    <button type="button" onclick="changeCount('on', 1)">+ On</button>
+    <button type="button" onclick="changeCount('on', -1)">- On</button>
+  </div>
 
-  <form method="POST" action="/submit">
-    <label for="route">Route</label>
-    <select name="route" id="route" onchange="updateTimeBlocks()">
-      <option value="">-- Select Route --</option>
-      {% for route in stop_data %}
-        <option value="{{ route }}" {% if route == selected_route %}selected{% endif %}>{{ route }}</option>
-      {% endfor %}
-    </select>
+  <div class="counter" id="offCountDisplay">Off: 0</div>
+  <div class="controls">
+    <button type="button" onclick="changeCount('off', 1)">+ Off</button>
+    <button type="button" onclick="changeCount('off', -1)">- Off</button>
+  </div>
 
-    <label for="time_block">Time Block</label>
-    <select name="time_block" id="time_block" onchange="updateStops()">
-      <option value="">-- Select Time Block --</option>
-    </select>
+  <div class="counter" id="studentOnCountDisplay">Student On: 0</div>
+  <div class="controls">
+    <button type="button" onclick="changeCount('student_on', 1)">+ Student On</button>
+    <button type="button" onclick="changeCount('student_on', -1)">- Student On</button>
+  </div>
 
-    <label for="stop">Stop</label>
-    <select name="stop" id="stop">
-      <option value="">-- Select Stop --</option>
-    </select>
+  <div class="counter" id="studentOffCountDisplay">Student Off: 0</div>
+  <div class="controls">
+    <button type="button" onclick="changeCount('student_off', 1)">+ Student Off</button>
+    <button type="button" onclick="changeCount('student_off', -1)">- Student Off</button>
+  </div>
 
-    <div id="paymentTypeSection" style="display: none;">
-      <label for="ticket_books_sold">Ticket Books Sold</label>
-      <input type="number" name="ticket_books_sold" id="ticket_books_sold" value="0" min="0">
+  <input type="hidden" name="on_count" id="on_count" value="0">
+  <input type="hidden" name="off_count" id="off_count" value="0">
+  <input type="hidden" name="student_on_count" id="student_on_count" value="0">
+  <input type="hidden" name="student_off_count" id="student_off_count" value="0">
+  <input type="hidden" name="stop_index" id="stop_index" value="{{ selected_stop_index or 0 }}">
 
-      <label for="cash_collected">Cash Collected</label>
-      <input type="number" name="cash_collected" id="cash_collected" value="0" min="0">
+  <div class="controls">
+    <button type="submit" name="direction" value="back">⬅️ Back</button>
+    <button type="submit" name="direction" value="forward">✅ Submit</button>
+  </div>
+</form>
 
-      <label for="tickets_collected">Tickets Collected</label>
-      <input type="number" name="tickets_collected" id="tickets_collected" value="0" min="0">
+<script>
+  let onCount = 0;
+  let offCount = 0;
+  let studentOnCount = 0;
+  let studentOffCount = 0;
 
-      <label for="credit">Credit</label>
-      <input type="number" name="credit" id="credit" value="0" min="0">
-    </div>
+  function changeCount(type, amount) {
+    if (type === 'on') {
+      onCount = Math.max(0, onCount + amount);
+      document.getElementById("onCountDisplay").textContent = `On: ${onCount}`;
+      document.getElementById("on_count").value = onCount;
+    } else if (type === 'off') {
+      offCount = Math.max(0, offCount + amount);
+      document.getElementById("offCountDisplay").textContent = `Off: ${offCount}`;
+      document.getElementById("off_count").value = offCount;
+    } else if (type === 'student_on') {
+      studentOnCount = Math.max(0, studentOnCount + amount);
+      document.getElementById("studentOnCountDisplay").textContent = `Student On: ${studentOnCount}`;
+      document.getElementById("student_on_count").value = studentOnCount;
+    } else if (type === 'student_off') {
+      studentOffCount = Math.max(0, studentOffCount + amount);
+      document.getElementById("studentOffCountDisplay").textContent = `Student Off: ${studentOffCount}`;
+      document.getElementById("student_off_count").value = studentOffCount;
+    }
+  }
 
-    <div class="counter" id="onCountDisplay">On: 0</div>
-    <div class="controls">
-      <button type="button" onclick="changeCount('on', 1)">+ On</button>
-      <button type="button" onclick="changeCount('on', -1)">- On</button>
-    </div>
+  const data = {{ stop_data | tojson }};
+  const selectedRoute = {{ selected_route | tojson }};
+  const selectedTimeBlock = {{ selected_time_block | tojson }};
+  const selectedStop = {{ selected_stop | tojson }};
 
-    <div class="counter" id="offCountDisplay">Off: 0</div>
-    <div class="controls">
-      <button type="button" onclick="changeCount('off', 1)">+ Off</button>
-      <button type="button" onclick="changeCount('off', -1)">- Off</button>
-    </div>
+  function updateTimeBlocks() {
+    const route = document.getElementById("route").value;
+    const timeBlockSelect = document.getElementById("time_block");
+    const paymentSection = document.getElementById("paymentTypeSection");
 
-    <input type="hidden" name="on_count" id="on_count" value="0">
-    <input type="hidden" name="off_count" id="off_count" value="0">
+    timeBlockSelect.innerHTML = '<option value="">-- Select Time Block --</option>';
 
-    <button type="submit">Submit</button>
-  </form>
+    const routesWithPayment = ["Montrose", "Norwood", "Nucla/Naturita"];
+    paymentSection.style.display = routesWithPayment.includes(route) ? "block" : "none";
 
-  <script>
-    let onCount = 0;
-    let offCount = 0;
-
-    function changeCount(type, amount) {
-      if (type === 'on') {
-        onCount = Math.max(0, onCount + amount);
-        document.getElementById("onCountDisplay").textContent = `On: ${onCount}`;
-        document.getElementById("on_count").value = onCount;
-      } else {
-        offCount = Math.max(0, offCount + amount);
-        document.getElementById("offCountDisplay").textContent = `Off: ${offCount}`;
-        document.getElementById("off_count").value = offCount;
-      }
+    if (route && data[route]) {
+      Object.keys(data[route]).forEach(block => {
+        const option = document.createElement("option");
+        option.value = block;
+        option.textContent = block;
+        if (block === selectedTimeBlock) {
+          option.selected = true;
+        }
+        timeBlockSelect.appendChild(option);
+      });
     }
 
-    const data = {{ stop_data | tojson }};
-    const selectedRoute = {{ selected_route | tojson }};
-    const selectedTimeBlock = {{ selected_time_block | tojson }};
-    const selectedStop = {{ selected_stop | tojson }};
+    updateStops();
+  }
 
-    function updateTimeBlocks() {
-      const route = document.getElementById("route").value;
-      const timeBlockSelect = document.getElementById("time_block");
-      const paymentSection = document.getElementById("paymentTypeSection");
+  function updateStops() {
+    const route = document.getElementById("route").value;
+    const timeBlock = document.getElementById("time_block").value;
+    const stopSelect = document.getElementById("stop");
 
-      timeBlockSelect.innerHTML = '<option value="">-- Select Time Block --</option>';
+    stopSelect.innerHTML = '<option value="">-- Select Stop --</option>';
 
-      const routesWithPayment = ["Montrose", "Norwood", "Nucla/Naturita"];
-      if (routesWithPayment.includes(route)) {
-        paymentSection.style.display = "block";
-      } else {
-        paymentSection.style.display = "none";
-      }
+    if (route && timeBlock && data[route] && data[route][timeBlock]) {
+      const stops = data[route][timeBlock];
+      stops.forEach((stop, index) => {
+        const option = document.createElement("option");
+        option.value = stop;
+        option.textContent = stop;
+        if (stop === selectedStop) {
+          option.selected = true;
+          document.getElementById("stop_index").value = index;
+        }
+        stopSelect.appendChild(option);
+      });
+    }
+  }
 
-      if (route && data[route]) {
-        Object.keys(data[route]).forEach(block => {
-          const option = document.createElement("option");
-          option.value = block;
-          option.textContent = block;
-          if (block === selectedTimeBlock) {
-            option.selected = true;
-          }
-          timeBlockSelect.appendChild(option);
-        });
+  window.onload = function () {
+    if (selectedRoute) {
+      document.getElementById("route").value = selectedRoute;
+      updateTimeBlocks();
+      if (selectedTimeBlock) {
+        document.getElementById("time_block").value = selectedTimeBlock;
         updateStops();
       }
     }
+  };
+</script>
 
-    function updateStops() {
-      const route = document.getElementById("route").value;
-      const timeBlock = document.getElementById("time_block").value;
-      const stopSelect = document.getElementById("stop");
-
-      stopSelect.innerHTML = '<option value="">-- Select Stop --</option>';
-
-      if (route && timeBlock && data[route] && data[route][timeBlock]) {
-        const stops = data[route][timeBlock];
-        stops.forEach(stop => {
-          const option = document.createElement("option");
-          option.value = stop;
-          option.textContent = stop;
-          if (stop === selectedStop) {
-            option.selected = true;
-          }
-          stopSelect.appendChild(option);
-        });
-      }
-    }
-
-    window.onload = function () {
-      if (selectedRoute) {
-        document.getElementById("route").value = selectedRoute;
-        updateTimeBlocks();
-      }
-    };
-  </script>
 </body>
 </html>
+
+
 
 
 
